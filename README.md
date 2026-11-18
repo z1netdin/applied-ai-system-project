@@ -6,6 +6,15 @@
 
 Why it matters: the free-text path uses **RAG** (Retrieval-Augmented Generation). The AI must first look up real songs, then it can only talk about those real songs, and the code double-checks that it did. This same pattern — look up data, then answer, then verify — is used in real AI products like support bots and coding assistants.
 
+### Grading evidence, quick links
+
+All of this is real text output from actually running the code, not a screenshot:
+
+- End-to-end run, 2-3+ inputs → [Sample Recommendation Output](#sample-recommendation-output), [Sample RAG Output](#sample-rag-output)
+- RAG feature behavior → [Sample RAG Output](#sample-rag-output), [Architecture Overview](#architecture-overview)
+- Guardrail behavior → [Guardrail Examples](#guardrail-examples)
+- Evaluation / reliability results → [Evaluation Results](#evaluation-results)
+
 ## Original Project (Module 3: Music Recommender Simulation)
 
 This builds on my **Module 3 project, "Music Recommender Simulation"** (also called VibeFinder 1.0).
@@ -377,4 +386,19 @@ flag as low-confidence, not silently paper over.
 ## Reflection
 
 The graded reflection on how I collaborated with AI while building this, what I accepted versus rejected or revised, and a deeper discussion of the system's limitations lives in [**model_card.md**](model_card.md) — not here, since reflection content placed only in the README doesn't earn the reflection points.
+
+---
+
+## Portfolio
+
+**GitHub repo:** [z1netdin/applied-ai-system-project](https://github.com/z1netdin/applied-ai-system-project)
+
+**What this project says about me as an AI engineer:**
+
+I can take something small I already built and make it do more, without breaking
+what already worked. I test my own work instead of just trusting the first answer
+— I found a real search bug myself by checking the actual numbers, not just
+reading the code. I use AI tools to help me build, but I still decide what to
+keep, change, or say no to. I build the simple version first, test it, then add
+the harder AI part on top once the simple part is solid.
 
