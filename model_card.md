@@ -179,32 +179,69 @@ Where my intuition disagrees with the system is `Broken Streetlights` at #3. It'
 
 ## 10. Applied AI System Extension — Responsible AI Reflection
 
-This section covers the new part only: the free-text RAG pipeline (retrieve →
-generate with Gemini → guardrail → fallback) added on top of VibeFinder 1.0.
+This part is about the new piece only: typing a free-text request, the AI
+searching for songs, then writing an explanation about them.
 
 ### What are the limitations or biases in this system?
 
-- **Retrieval is literal, not semantic.** The search step matches exact words, not meaning. A word like "calm" will not match a song tagged "chill" unless that exact word is present. So the search can miss a song that is actually a great fit, just because the user and the catalog used different words for the same feeling.
-- **The guardrail checks safety, not quality.** It only confirms the AI stuck to real, retrieved songs. It does not check whether the AI picked the *best* one. A safe but mediocre answer always passes.
-- **Old biases carry over.** The catalog is still only 18 songs, most genres have just 1 song, and mood is still weighted higher than genre in the original scoring (Section 6). The new free-text path sits on top of that same small, uneven catalog — it just hides the bias behind a nicer-sounding sentence.
-- **A new bias I can't rule out:** the AI picks which retrieved song to talk about first or most. I did not test whether it favors songs with more "exciting" labels (like "happy" or "intense") over quieter ones, even when they fit the request equally well.
+My search only matches exact words. If I type "calm" but a song is tagged
+"chill," it will not match, even if they mean almost the same thing.
+
+My guardrail checks one thing only: did the AI use a real song from my
+list? It does not check if the AI picked the *best* song. A boring answer
+can still pass.
+
+The old problems are still here too. Only 18 songs. Most genres have just
+1 song. Mood still counts more than genre. The new AI part sits on top of
+this same small catalog. It does not fix any of that, it just hides it
+behind a nicer sentence.
+
+I also don't know if the AI likes certain songs more just because of their
+label, like "happy" or "intense," even when a quieter song fits just as
+well. I did not test for this.
 
 ### Could this AI be misused, and how would I prevent it?
 
-The free-text box is a real prompt sent to an AI model, so it is open to **prompt injection** — someone could type something designed to make the AI ignore its instructions and say something unrelated to music.
+The free-text box sends my words straight to an AI model. Someone could
+type something tricky, to try to make the AI say something not about
+music at all. This is called prompt injection.
 
-What already helps: the guardrail only accepts a response if it names a real, retrieved song. An off-topic answer almost never does that, so it gets thrown out and replaced with the safe template automatically — without me planning this as an anti-injection feature specifically, it ends up blocking a lot of injection attempts as a side effect.
+My guardrail helps with this by accident. If the AI's answer does not name
+a real retrieved song, I throw it away and use a safe template instead. So
+most tricky answers get blocked too, even though I did not build it for
+that reason.
 
-What I have *not* built yet, and would add before letting strangers use this: a check on the *input* itself (reject very long or clearly non-music text before it ever reaches the AI), and a rate limit, so one person can't spam the API.
+I did not build a way to check the user's words before they go to the AI.
+I also have no limit on how many times someone can ask. I would add both
+of these before letting strangers use this for real.
 
 ### What surprised me while testing reliability?
 
-The biggest surprise: my evaluation harness reported **"5/5 test cases passed,"** but two of those five (the empty query and the gibberish query) only passed because the harness checks "did it behave safely," not "did it behave well." Underneath, the search step found **0.000 similarity** for every single song on both of those inputs — it had nothing relevant to return, and the AI just talked about whatever songs it was handed anyway. A clean pass/fail score hid a real weakness. That taught me a passing test is only as honest as what it actually measures.
+My test said "5 out of 5 passed." But 2 of those 5 only passed because my
+test only checks "did it crash," not "did it work well." For an empty
+input and a nonsense input, my search found 0.000 match for every single
+song. It had nothing good to give back, but the AI still talked about
+random songs anyway, and my test still called that a pass. A passing test
+does not always mean a good answer. That surprised me.
 
-A smaller surprise: partway through building this, Google changed which Gemini model versions were available, and my first attempt failed with an error telling me to switch models. I didn't expect to run into "the AI provider changed things under me" in a small class project, but it's a real part of building on top of AI APIs.
+Also, while I was still building this, Google changed which AI model I
+was allowed to use. My first try failed with an error telling me to
+switch models. I did not expect the AI company to change things on me in
+the middle of a small class project.
 
 ### My collaboration with AI (Claude) during this project
 
-**One suggestion I accepted:** Claude suggested the system should *fail closed* — if the guardrail rejects an AI answer, or the AI call fails at all (no key, no network, rate limit), immediately fall back to a safe templated explanation instead of retrying or showing a questionable answer. I kept this exactly as suggested, because I watched it actually catch a forced bad test case (a fake response naming a song that was never retrieved) during testing, and it means the app never crashes even without a working API key — which matters since I can't guarantee grading will happen with my key still active.
+One suggestion I accepted: Claude said if the guardrail says no, or if the
+AI call fails for any reason, just use a safe template right away instead
+of trying again. I kept this. I watched it actually catch a fake bad
+answer during testing, and it means my app still works even without an
+API key.
 
-**One suggestion I did not accept as written:** Claude's first recommendation was to extend my **Module 2 project (PawPal+, a pet-care scheduler)** instead of this one, using an agentic tool-calling loop, since PawPal+ already had the cleanest class structure. I pushed back and asked directly why not the music recommender. Claude reconsidered and changed its recommendation to the music recommender. This wasn't really a "wrong" suggestion — PawPal+ could have worked too — it was a **poor fit**: an agent that actually edits someone's schedule felt riskier to guardrail safely in the time I had, while a song catalog mapped onto retrieval much more directly. So I rejected the first project choice and we rebuilt the plan around this project instead.
+One suggestion I did not accept as written: Claude's first idea was to
+extend my Module 2 project (PawPal+, a pet schedule app) using an AI agent
+that plans and edits things on its own. I said no, and asked about the
+music project instead. Claude agreed and changed the plan to the music
+recommender. PawPal+ was not a bad idea, it just was not the best fit — an
+AI that edits someone's schedule felt riskier to control safely in the
+time I had, and a song list fit the search-and-generate idea much better.
+So I changed the whole project choice, not just a small detail.
