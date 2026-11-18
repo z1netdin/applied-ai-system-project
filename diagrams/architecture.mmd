@@ -1,7 +1,18 @@
 flowchart TD
-    A[User input: genre, mood, target_energy, likes_acoustic] --> B[load_songs: data/songs.csv]
-    B --> C[score_song: for each song]
-    C --> D[Scoring rules\ngenre match +1.5\nmood match +2.0\nenergy closeness up to +2.0\nacousticness alignment +/-0.5]
-    D --> E[recommend_songs: rank by score, tie-break by energy diff]
-    E --> F[Top-k songs + per-song explanation]
-    F --> G[CLI output: src/main.py]
+    Start[User runs src/main.py] --> Mode{Which input?}
+
+    Mode -->|Structured profile| Score[score_song: genre/mood/energy/acousticness rules]
+    Score --> RankA[recommend_songs: rank by score]
+    RankA --> OutA[Top-k songs + rule-based explanation]
+
+    Mode -->|Free-text query, e.g. 'calm songs for studying'| Retrieve[Retrieve: SongIndex.search - TF-IDF over song catalog]
+    Retrieve --> Retrieved[(Top-k retrieved songs)]
+    Retrieved --> Generate[Generate: Gemini explains picks using ONLY retrieved songs]
+    Generate --> Guard{Guardrail: check_grounding}
+    Guard -->|Pass: mentions a retrieved song, no invented song| OutB[Use AI explanation]
+    Guard -->|Fail or AI unavailable| Fallback[Fallback: deterministic template from retrieved songs]
+    Fallback --> OutB
+
+    OutA --> Log[Log run to logs/app.log]
+    OutB --> Log
+    Log --> End[Print result to console]

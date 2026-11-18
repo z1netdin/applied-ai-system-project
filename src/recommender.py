@@ -2,6 +2,10 @@ import csv
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 
+from src.guardrails import check_grounding, logger
+from src.llm import generate_explanation
+from src.retrieval import SongIndex
+
 @dataclass
 class Song:
     """
@@ -112,3 +116,62 @@ def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tup
         (song, score, "; ".join(reasons) if reasons else "no strong matches")
         for song, score, reasons in ranked[:k]
     ]
+
+
+def _fallback_explanation(retrieved_songs: List[Dict]) -> str:
+    """Safe, deterministic explanation used when the LLM is unavailable or fails the guardrail."""
+    lines = [
+        f"\"{song['title']}\" by {song['artist']} ({song['genre']}, {song['mood']} mood)"
+        for song in retrieved_songs
+    ]
+    return "Closest catalog matches for your request: " + "; ".join(lines) + "."
+
+
+def recommend_with_rag(query: str, songs: List[Dict], k: int = 5) -> Dict:
+    """
+    RAG pipeline for a free-text request, e.g. "something calm for studying":
+
+    1. Retrieve: search the catalog for the k closest-matching songs (src/retrieval.py).
+    2. Generate: ask the LLM to explain the picks using ONLY the retrieved songs (src/llm.py).
+    3. Guardrail: check the explanation didn't invent songs or ignore the retrieved data
+       (src/guardrails.py). If it fails, or the LLM is unavailable, fall back to a safe
+       templated explanation so the system never crashes and always returns something useful.
+    """
+    index = SongIndex(songs)
+    retrieved = index.search(query, k=k)
+    retrieved_songs = [song for song, _score in retrieved]
+
+    logger.info(
+        "RAG query=%r retrieved=%r", query, [song["title"] for song in retrieved_songs]
+    )
+
+    explanation = generate_explanation(query, retrieved_songs)
+    source = "llm"
+    guardrail_passed = None
+    guardrail_reason = "llm not used"
+
+    if explanation is not None:
+        guardrail_passed, guardrail_reason = check_grounding(explanation, retrieved_songs, songs)
+        if not guardrail_passed:
+            logger.warning("Guardrail blocked LLM response: %s", guardrail_reason)
+            explanation = None
+
+    if explanation is None:
+        explanation = _fallback_explanation(retrieved_songs)
+        source = "fallback_template"
+
+    logger.info(
+        "RAG result source=%s guardrail_passed=%s reason=%s",
+        source,
+        guardrail_passed,
+        guardrail_reason,
+    )
+
+    return {
+        "query": query,
+        "retrieved": retrieved,
+        "explanation": explanation,
+        "source": source,
+        "guardrail_passed": guardrail_passed,
+        "guardrail_reason": guardrail_reason,
+    }
