@@ -65,3 +65,25 @@ def test_uses_llm_response_when_grounded(monkeypatch):
 
     assert result["source"] == "llm"
     assert result["guardrail_passed"] is True
+
+
+def test_explanations_has_one_entry_per_retrieved_song(monkeypatch):
+    monkeypatch.setattr(
+        recommender,
+        "generate_explanation",
+        lambda query, songs: "Chill Study Beats: perfect for a quiet study session.",
+    )
+
+    result = recommender.recommend_with_rag("something calm for studying", make_songs(), k=1)
+
+    assert "Chill Study Beats" in result["explanations"]
+    assert "quiet study session" in result["explanations"]["Chill Study Beats"]
+
+
+def test_explanations_falls_back_per_song_when_llm_unavailable(monkeypatch):
+    monkeypatch.setattr(recommender, "generate_explanation", lambda _query, _songs: None)
+
+    result = recommender.recommend_with_rag("something calm for studying", make_songs(), k=1)
+
+    assert "Chill Study Beats" in result["explanations"]
+    assert result["explanations"]["Chill Study Beats"].strip() != ""

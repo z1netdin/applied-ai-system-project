@@ -61,9 +61,11 @@ def generate_explanation(query: str, retrieved_songs: List[Dict]) -> Optional[st
         "Here are the only songs you are allowed to talk about (retrieved from "
         "the catalog as the closest matches):\n"
         f"{song_facts}\n\n"
-        "Write a short (2-4 sentence) explanation of why these songs fit the "
-        "request. Only reference songs from the list above, using their exact "
-        "titles. Do not invent songs or attributes that are not listed."
+        "For EACH song listed above, write exactly one line in this exact format:\n"
+        "Song Title: one short sentence (10-20 words) explaining why it fits the request.\n\n"
+        "Only reference songs from the list above, using their exact titles. "
+        "Do not invent songs or attributes that are not listed. "
+        "Output only those lines, one per song, nothing else before or after."
     )
 
     try:

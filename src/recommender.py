@@ -129,6 +129,35 @@ def _fallback_explanation(retrieved_songs: List[Dict]) -> str:
     return "Closest catalog matches for your request: " + "; ".join(lines) + "."
 
 
+def _fallback_per_song(retrieved_songs: List[Dict]) -> Dict[str, str]:
+    """Safe, deterministic one-line-per-song blurb, used the same cases as _fallback_explanation."""
+    return {
+        song["title"]: f"A {song['mood']} {song['genre']} track that matches your request."
+        for song in retrieved_songs
+    }
+
+
+def _parse_per_song(text: str, retrieved_songs: List[Dict]) -> Dict[str, str]:
+    """
+    Pulls one reason per song out of the LLM's "Title: reason" lines. Any song the
+    LLM didn't give a clean line for still gets a safe, deterministic fallback line,
+    so the UI always has something to show for every retrieved song.
+    """
+    reasons = dict(_fallback_per_song(retrieved_songs))
+    lines = [line.strip("- \t") for line in text.splitlines() if line.strip()]
+
+    for song in retrieved_songs:
+        title_lower = song["title"].lower()
+        for line in lines:
+            if title_lower in line.lower():
+                _, _, rest = line.partition(":")
+                reason = rest.strip() if rest.strip() else line.strip()
+                reasons[song["title"]] = reason
+                break
+
+    return reasons
+
+
 def recommend_with_rag(query: str, songs: List[Dict], k: int = 5) -> Dict:
     """
     RAG pipeline for a free-text request, e.g. "something calm for studying":
@@ -161,7 +190,10 @@ def recommend_with_rag(query: str, songs: List[Dict], k: int = 5) -> Dict:
 
     if explanation is None:
         explanation = _fallback_explanation(retrieved_songs)
+        explanations = _fallback_per_song(retrieved_songs)
         source = "fallback_template"
+    else:
+        explanations = _parse_per_song(explanation, retrieved_songs)
 
     logger.info(
         "RAG result source=%s guardrail_passed=%s reason=%s",
@@ -174,6 +206,7 @@ def recommend_with_rag(query: str, songs: List[Dict], k: int = 5) -> Dict:
         "query": query,
         "retrieved": retrieved,
         "explanation": explanation,
+        "explanations": explanations,
         "source": source,
         "guardrail_passed": guardrail_passed,
         "guardrail_reason": guardrail_reason,

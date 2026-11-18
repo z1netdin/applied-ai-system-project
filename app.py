@@ -10,6 +10,11 @@ here. That information exists for engineers in logs/app.log and the README.
 tab is open, cleared on refresh. Nothing is written to a database - this
 is a class project, not a production backend.
 
+No audio playback: the song catalog is synthetic metadata for a class
+project (title/artist/genre/mood only) - there are no real audio files
+behind any of these songs, so "Listen" is shown as an honestly-disabled
+state rather than faking a player with placeholder sound.
+
 Run with: streamlit run app.py
 """
 
@@ -19,7 +24,7 @@ import streamlit as st
 
 from src.recommender import load_songs, recommend_songs, recommend_with_rag
 
-st.set_page_config(page_title="VibeFinder", layout="centered")
+st.set_page_config(page_title="VibeFinder", layout="wide")
 
 st.markdown(
     """
@@ -38,7 +43,14 @@ st.markdown(
     }
 
     .stApp { background-color: #F7F4EE; }
-    .block-container { max-width: 900px; padding-top: 1.5rem; padding-bottom: 4rem; }
+    .block-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding-left: 2rem;
+        padding-right: 2rem;
+        padding-top: 1.5rem;
+        padding-bottom: 4rem;
+    }
 
     .topbar {
         display: flex;
@@ -92,10 +104,12 @@ st.markdown(
     }
 
     .stButton > button {
-        height: 64px;
+        min-height: 52px;
         width: 100%;
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 600;
+        white-space: nowrap;
+        padding: 0.6rem 1.5rem;
         border-radius: 14px;
         border: 1.5px solid #DCD6CD;
         background-color: #FFFFFF;
@@ -109,11 +123,17 @@ st.markdown(
         background-color: #FBEDE7;
         box-shadow: 0 4px 12px rgba(194, 109, 83, 0.15);
     }
+    .stButton > button:disabled {
+        color: #B5AFA2;
+        background-color: #F2EEE5;
+        border-color: #E3DED3;
+        box-shadow: none;
+    }
     .stButton > button[kind="primary"] {
-        height: 80px;
+        min-height: 64px;
         max-width: 420px;
         margin: 0 auto;
-        padding: 14px 0;
+        padding: 0.75rem 1.5rem;
         background-color: #C26D53;
         border: none;
         color: #FFFFFF !important;
@@ -124,15 +144,16 @@ st.markdown(
         background-color: #A85940;
         color: #FFFFFF !important;
     }
+
     .pick-card {
-        flex: 1;
         background-color: #FFFFFF;
         border: 1.5px solid #DCD6CD;
         border-radius: 14px;
-        padding: 22px 26px;
+        padding: 20px 24px;
         box-shadow: 0 1px 4px rgba(44, 42, 41, 0.06);
     }
-    .pick-title { font-size: 19px; font-weight: 700; color: #2C2A29; }
+    .pick-title { font-size: 19px; font-weight: 700; color: #2C2A29; margin-bottom: 6px; }
+    .pick-why { font-size: 15px; color: #6E7A74; line-height: 1.5; }
 
     .stTextInput label, .stSelectbox label, .stSlider label, .stCheckbox label {
         color: #2C2A29 !important;
@@ -198,6 +219,8 @@ if "saved_tracks" not in st.session_state:
     st.session_state["saved_tracks"] = []
 if "active_query" not in st.session_state:
     st.session_state["active_query"] = None
+if "rag_cache" not in st.session_state:
+    st.session_state["rag_cache"] = {}
 
 
 def save_track(title: str, artist: str) -> None:
@@ -206,16 +229,33 @@ def save_track(title: str, artist: str) -> None:
         st.session_state["saved_tracks"].append({"title": title, "artist": artist})
 
 
-def render_pick(title: str, artist: str, key: str) -> None:
-    card_col, save_col = st.columns([5, 1])
+def render_pick(display_title: str, title: str, artist: str, description: str, key: str) -> None:
+    """display_title may include a rank prefix (e.g. "1. Song Name") for on-screen display;
+    title is always the clean song title, used for saving so "Saved Tracks" stays clean."""
+    card_col, preview_col, save_col = st.columns([6, 1, 1], vertical_alignment="center")
     with card_col:
         st.markdown(
-            f"""<div class="pick-card"><div class="pick-title">{title} — {artist}</div></div>""",
+            f"""<div class="pick-card">
+                <div class="pick-title">{display_title} — {artist}</div>
+                <div class="pick-why">{description}</div>
+            </div>""",
             unsafe_allow_html=True,
         )
+    with preview_col:
+        st.button("Listen", key=f"preview_{key}", disabled=True, help="Preview not available in this demo")
     with save_col:
         if st.button("Save", key=key):
             save_track(title, artist)
+
+
+def get_rag_result(query: str):
+    """Only calls the AI pipeline when the query actually changes - clicking
+    Save or any other button on the page must not re-trigger a live AI call."""
+    cache = st.session_state["rag_cache"]
+    if query not in cache:
+        with st.spinner("Finding songs for you..."):
+            cache[query] = recommend_with_rag(query, songs, k=3)
+    return cache[query]
 
 
 SURPRISE_QUERY = "a good, widely enjoyable song for someone who isn't sure what they want to hear right now"
@@ -246,19 +286,18 @@ for col, name in zip(row2, mood_names[3:]):
         st.session_state["active_query"] = moods[name]
 
 with st.expander("Describe it in your own words instead"):
-    custom_text = st.text_input("How are you feeling?", placeholder="e.g. overwhelmed and need to slow down")
-    if st.button("Find songs", type="primary"):
+    custom_text = st.text_input("How are you feeling?", placeholder="e.g. I am overwhelmed with final exams")
+    if st.button("Find songs"):
         if custom_text.strip():
             st.session_state["active_query"] = custom_text
 
 if st.session_state["active_query"]:
-    with st.spinner("Finding songs for you..."):
-        result = recommend_with_rag(st.session_state["active_query"], songs, k=3)
+    result = get_rag_result(st.session_state["active_query"])
 
     st.markdown('<p class="section-label">Your picks</p>', unsafe_allow_html=True)
     for song, _score in result["retrieved"]:
-        render_pick(song["title"], song["artist"], key=f"save_mood_{song['id']}")
-    st.write(result["explanation"])
+        description = result["explanations"].get(song["title"], "")
+        render_pick(song["title"], song["title"], song["artist"], description, key=f"save_mood_{song['id']}")
 
 with st.expander("Prefer to build a detailed taste profile instead?"):
     genres = sorted({s["genre"] for s in songs})
@@ -270,22 +309,29 @@ with st.expander("Prefer to build a detailed taste profile instead?"):
     likes_acoustic = st.checkbox("I like acoustic songs")
 
     if st.button("Get recommendations", key="profile_button"):
-        user_prefs = {
+        st.session_state["profile_prefs"] = {
             "genre": genre,
             "mood": mood,
             "energy": energy,
             "likes_acoustic": likes_acoustic,
         }
-        results = recommend_songs(user_prefs, songs, k=5)
+
+    if st.session_state.get("profile_prefs"):
+        results = recommend_songs(st.session_state["profile_prefs"], songs, k=5)
 
         def _clean_reason(reason: str) -> str:
             return re.sub(r"\s*\([+-]?\d+\.\d+\)", "", reason).strip()
 
         st.markdown('<p class="section-label">Your picks</p>', unsafe_allow_html=True)
         for rank, (song, _score, explanation) in enumerate(results, start=1):
-            render_pick(f"{rank}. {song['title']}", song["artist"], key=f"save_profile_{song['id']}")
             reasons = [_clean_reason(r) for r in explanation.split("; ")]
-            st.caption(", ".join(reasons))
+            render_pick(
+                f"{rank}. {song['title']}",
+                song["title"],
+                song["artist"],
+                ", ".join(reasons),
+                key=f"save_profile_{song['id']}",
+            )
 
 st.markdown('<div id="saved-tracks-anchor"></div>', unsafe_allow_html=True)
 st.markdown('<p class="section-label">Saved Tracks</p>', unsafe_allow_html=True)
