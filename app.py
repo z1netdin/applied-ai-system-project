@@ -6,6 +6,10 @@ away. Customer-facing copy only - no internal implementation details
 (model names, retrieval mechanics, guardrail status, raw scores) are shown
 here. That information exists for engineers in logs/app.log and the README.
 
+"Saved Tracks" is real, session-based: songs stay saved while this browser
+tab is open, cleared on refresh. Nothing is written to a database - this
+is a class project, not a production backend.
+
 Run with: streamlit run app.py
 """
 
@@ -20,8 +24,12 @@ st.set_page_config(page_title="VibeFinder", layout="centered")
 st.markdown(
     """
     <style>
+    header[data-testid="stHeader"] { height: 0; visibility: hidden; }
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+
     .stApp { background-color: #F7F4EE; }
-    .block-container { max-width: 880px; padding-top: 2rem; padding-bottom: 4rem; }
+    .block-container { max-width: 900px; padding-top: 1.5rem; padding-bottom: 4rem; }
 
     .topbar {
         display: flex;
@@ -31,17 +39,17 @@ st.markdown(
         margin-bottom: 2rem;
         border-bottom: 1px solid #E3DED3;
     }
-    .topbar .brand { font-weight: 700; color: #2F3B38 !important; font-size: 16px; letter-spacing: 0.5px; }
+    .topbar .brand { font-weight: 700; color: #2C2A29 !important; font-size: 16px; letter-spacing: 0.5px; }
     .topbar nav a {
         color: #6E7A74 !important;
         text-decoration: none;
         font-size: 15px;
         margin-left: 28px;
     }
-    .topbar nav a:hover { color: #C1694F !important; }
+    .topbar nav a:hover { color: #C26D53 !important; }
 
     h1[data-testid="stHeading"], .stApp h1, [data-testid="stMarkdownContainer"] h1 {
-        color: #2F3B38 !important;
+        color: #2C2A29 !important;
         text-align: center;
         font-weight: 700 !important;
         letter-spacing: 0.5px;
@@ -62,7 +70,7 @@ st.markdown(
         flex-wrap: wrap;
     }
     .how-step { text-align: center; max-width: 180px; color: #6E7A74; font-size: 14px; }
-    .how-step b { display: block; color: #2F3B38; font-size: 15px; margin-bottom: 2px; }
+    .how-step b { display: block; color: #2C2A29; font-size: 15px; margin-bottom: 2px; }
 
     .section-label {
         color: #8A8475 !important;
@@ -75,60 +83,62 @@ st.markdown(
     }
 
     .stButton > button {
-        height: 88px;
+        height: 64px;
         width: 100%;
         font-size: 18px;
         font-weight: 600;
         border-radius: 14px;
-        border: 1.5px solid #D6CFC0;
+        border: 1.5px solid #DCD6CD;
         background-color: #FFFFFF;
-        color: #2F3B38;
-        box-shadow: 0 1px 4px rgba(47, 59, 56, 0.06);
+        color: #2C2A29;
+        box-shadow: 0 1px 4px rgba(44, 42, 41, 0.06);
         transition: all 0.15s ease;
     }
     .stButton > button:hover {
-        border-color: #C1694F;
-        color: #C1694F;
+        border-color: #C26D53;
+        color: #C26D53;
         background-color: #FBEDE7;
-        box-shadow: 0 4px 12px rgba(193, 105, 79, 0.15);
+        box-shadow: 0 4px 12px rgba(194, 109, 83, 0.15);
     }
     .stButton > button[kind="primary"] {
-        height: 72px;
-        background-color: #C1694F;
+        height: 80px;
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 14px 0;
+        background-color: #C26D53;
         border: none;
         color: #FFFFFF !important;
         font-size: 19px;
-        box-shadow: 0 2px 8px rgba(193, 105, 79, 0.25);
+        box-shadow: 0 2px 8px rgba(194, 109, 83, 0.25);
     }
     .stButton > button[kind="primary"]:hover {
-        background-color: #A8573F;
+        background-color: #A85940;
         color: #FFFFFF !important;
     }
-
     .pick-card {
+        flex: 1;
         background-color: #FFFFFF;
-        border: 1.5px solid #D6CFC0;
+        border: 1.5px solid #DCD6CD;
         border-radius: 14px;
         padding: 22px 26px;
-        margin-bottom: 12px;
-        box-shadow: 0 1px 4px rgba(47, 59, 56, 0.06);
+        box-shadow: 0 1px 4px rgba(44, 42, 41, 0.06);
     }
-    .pick-title { font-size: 19px; font-weight: 700; color: #2F3B38; }
+    .pick-title { font-size: 19px; font-weight: 700; color: #2C2A29; }
 
     .stTextInput label, .stSelectbox label, .stSlider label, .stCheckbox label {
-        color: #2F3B38 !important;
+        color: #2C2A29 !important;
         font-weight: 600 !important;
     }
-    .stTextInput input::placeholder { color: #9C9688 !important; opacity: 1 !important; }
+    .stTextInput input::placeholder { color: #5A5550 !important; opacity: 1 !important; }
 
     .about-box {
         background-color: #FFFFFF;
         border: 1.5px solid #E3DED3;
         border-radius: 14px;
         padding: 24px 28px;
-        margin-top: 3rem;
+        margin-top: 1.5rem;
     }
-    .about-box h4 { color: #2F3B38; margin-bottom: 8px; }
+    .about-box h4 { color: #2C2A29; margin-bottom: 8px; }
     .about-box p { color: #6E7A74; font-size: 15px; line-height: 1.6; margin: 0; }
 
     .footnote {
@@ -140,11 +150,13 @@ st.markdown(
     }
     </style>
 
+    <div id="top-anchor"></div>
     <div class="topbar">
         <div class="brand">VIBEFINDER</div>
         <nav>
-            <a href="#how-it-works-anchor">How It Works</a>
+            <a href="#top-anchor">Home</a>
             <a href="#about-anchor">About</a>
+            <a href="#saved-tracks-anchor">Saved Tracks</a>
         </nav>
     </div>
     """,
@@ -158,7 +170,6 @@ st.markdown(
 )
 st.markdown(
     """
-    <div id="how-it-works-anchor" class="how-step" style="height:0; margin:0; padding:0;"></div>
     <div class="how-it-works">
         <div class="how-step"><b>1. Tell us how you feel</b>Pick a mood, or describe it yourself.</div>
         <div class="how-step"><b>2. We find a match</b>Real songs, chosen for that feeling.</div>
@@ -169,6 +180,30 @@ st.markdown(
 )
 
 songs = load_songs("data/songs.csv")
+
+if "saved_tracks" not in st.session_state:
+    st.session_state["saved_tracks"] = []
+if "active_query" not in st.session_state:
+    st.session_state["active_query"] = None
+
+
+def save_track(title: str, artist: str) -> None:
+    saved_titles = {t["title"] for t in st.session_state["saved_tracks"]}
+    if title not in saved_titles:
+        st.session_state["saved_tracks"].append({"title": title, "artist": artist})
+
+
+def render_pick(title: str, artist: str, key: str) -> None:
+    card_col, save_col = st.columns([5, 1])
+    with card_col:
+        st.markdown(
+            f"""<div class="pick-card"><div class="pick-title">{title} — {artist}</div></div>""",
+            unsafe_allow_html=True,
+        )
+    with save_col:
+        if st.button("Save", key=key):
+            save_track(title, artist)
+
 
 SURPRISE_QUERY = "a good, widely enjoyable song for someone who isn't sure what they want to hear right now"
 
@@ -187,9 +222,6 @@ moods = {
     "Can't Sleep": "slow soothing songs to help me wind down at night",
     "Need a Lift": "uplifting songs to help lift my mood",
 }
-
-if "active_query" not in st.session_state:
-    st.session_state["active_query"] = None
 
 mood_names = list(moods.keys())
 row1, row2 = st.columns(3), st.columns(3)
@@ -212,12 +244,7 @@ if st.session_state["active_query"]:
 
     st.markdown('<p class="section-label">Your picks</p>', unsafe_allow_html=True)
     for song, _score in result["retrieved"]:
-        st.markdown(
-            f"""<div class="pick-card">
-                <div class="pick-title">{song['title']} — {song['artist']}</div>
-            </div>""",
-            unsafe_allow_html=True,
-        )
+        render_pick(song["title"], song["artist"], key=f"save_mood_{song['id']}")
     st.write(result["explanation"])
 
 with st.expander("Prefer to build a detailed taste profile instead?"):
@@ -243,13 +270,24 @@ with st.expander("Prefer to build a detailed taste profile instead?"):
 
         st.markdown('<p class="section-label">Your picks</p>', unsafe_allow_html=True)
         for rank, (song, _score, explanation) in enumerate(results, start=1):
-            st.markdown(f"**{rank}. {song['title']}** — {song['artist']}")
+            render_pick(f"{rank}. {song['title']}", song["artist"], key=f"save_profile_{song['id']}")
             reasons = [_clean_reason(r) for r in explanation.split("; ")]
             st.caption(", ".join(reasons))
 
+st.markdown('<div id="saved-tracks-anchor"></div>', unsafe_allow_html=True)
+st.markdown('<p class="section-label">Saved Tracks</p>', unsafe_allow_html=True)
+if st.session_state["saved_tracks"]:
+    for track in st.session_state["saved_tracks"]:
+        st.markdown(
+            f"""<div class="pick-card"><div class="pick-title">{track['title']} — {track['artist']}</div></div>""",
+            unsafe_allow_html=True,
+        )
+else:
+    st.caption("Nothing saved yet. Press Save on a song you like.")
+
 st.markdown(
     """
-    <div id="about-anchor" style="height:0; margin:0; padding:0;"></div>
+    <div id="about-anchor"></div>
     <div class="about-box">
         <h4>About VibeFinder</h4>
         <p>VibeFinder matches your mood to real songs in our catalog, using search
