@@ -4,7 +4,9 @@ from dataclasses import dataclass
 
 from src.guardrails import check_grounding, logger
 from src.llm import generate_explanation
-from src.retrieval import SongIndex
+from src.retrieval import SongIndex, load_song_notes
+
+SONG_NOTES_PATH = "data/song_notes.md"
 
 @dataclass
 class Song:
@@ -137,7 +139,8 @@ def recommend_with_rag(query: str, songs: List[Dict], k: int = 5) -> Dict:
        (src/guardrails.py). If it fails, or the LLM is unavailable, fall back to a safe
        templated explanation so the system never crashes and always returns something useful.
     """
-    index = SongIndex(songs)
+    notes = load_song_notes(SONG_NOTES_PATH)
+    index = SongIndex(songs, notes=notes)
     retrieved = index.search(query, k=k)
     retrieved_songs = [song for song, _score in retrieved]
 

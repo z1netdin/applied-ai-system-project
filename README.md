@@ -283,6 +283,35 @@ guardrail's behavior is checked on every run, not just by hand.
 
 ---
 
+## Stretch Feature: Multi-Source Retrieval
+
+Search used to look at only one source: the structured song data in `data/songs.csv`
+(genre, mood, energy tags). Now it also reads a second source: `data/song_notes.md`,
+a hand-written note for each song using everyday words instead of just tags. Both
+get combined into one search index (`src/retrieval.py`), so a query can match
+either source.
+
+Why this matters: the tags alone are a fixed, narrow vocabulary. A note can say
+"calm" even if the official tag is "chill," so more real user requests actually
+find something.
+
+**Before (tags only) vs. after (tags + notes), same 3 queries:**
+
+| Query | Before: top match (score) | After: top match (score) |
+|---|---|---|
+| "something calm for studying" | *(none — 0.000 for every song)* | Midnight Coding (0.210) |
+| "sad song for a rainy day" | Rainy Window Blues (0.215) | Rainy Window Blues (0.429) |
+| "fun danceable party song" | *(none — 0.000 for every song)* | Carnival Lights (0.105) |
+
+For the first and third query, search used to find nothing at all. Now it finds
+the actual right song each time, just from adding a second, hand-written data
+source — no bigger model, no extra cost, same TF-IDF method as before.
+
+This is covered by `tests/test_retrieval.py` (checks notes load correctly, and
+that a note-only word like "relaxing" only matches once notes are added).
+
+---
+
 ## Evaluation Results
 
 `python -m src.evaluate` runs the real pipeline against 5 fixed test cases — 3 normal
@@ -338,7 +367,7 @@ flag as low-confidence, not silently paper over.
 
 **From the new RAG extension:**
 
-- Keyword search can score **0.000 match** for every song if the user's words don't appear in the catalog. The AI can still give an OK answer using the song's real data, but weak search means a lower ceiling on how good the answer can be.
+- Keyword search can still score **0.000 match** for every song if the user's words don't appear in the catalog tags OR the notes in `data/song_notes.md`. Adding the notes file fixed this for several real queries (see Stretch Feature above), but it is still exact-word matching, just with a bigger vocabulary — a word I didn't think to add a note for will still miss.
 - The guardrail checks "did it stay grounded," not "did it pick the best song." A safe-but-mediocre pick still passes.
 - The AI model name is hardcoded. If the provider removes that model again, the code needs a manual update.
 - No limit on how many times someone can call the AI — no cost control.

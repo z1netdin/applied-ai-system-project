@@ -17,7 +17,7 @@ def make_songs():
         },
         {
             "id": 2,
-            "title": "Gym Hero",
+            "title": "Energetic Workout Jam",
             "artist": "Max Pulse",
             "genre": "pop",
             "mood": "energetic",

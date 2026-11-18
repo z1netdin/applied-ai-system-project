@@ -184,8 +184,11 @@ searching for songs, then writing an explanation about them.
 
 ### What are the limitations or biases in this system?
 
-My search only matches exact words. If I type "calm" but a song is tagged
-"chill," it will not match, even if they mean almost the same thing.
+My search only matches exact words. I added a second file with hand-written
+notes for each song (using words like "calm" for a song tagged "chill"),
+and that fixed several real cases (see README). But it only helps for
+words I thought to write down. Any other word I did not think of still
+will not match, even if it means almost the same thing.
 
 My guardrail checks one thing only: did the AI use a real song from my
 list? It does not check if the AI picked the *best* song. A boring answer

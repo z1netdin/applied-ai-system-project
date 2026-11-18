@@ -5,31 +5,63 @@ Builds a small search index over the song catalog so a free-text query
 (e.g. "something calm for studying") can find the closest-matching songs
 *before* any text is generated. This is plain TF-IDF + cosine similarity -
 no extra ML libraries needed, so it is easy to read and runs instantly.
+
+Multi-source retrieval: the index is built from TWO sources per song -
+the structured attributes in data/songs.csv (genre, mood, energy, ...)
+AND a hand-written free-text blurb from data/song_notes.md, which uses
+everyday synonym words (e.g. "calm" for a song tagged "chill"). Combining
+both sources catches queries the structured fields alone would miss.
 """
 
 import math
+import os
+import re
 from collections import Counter
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
-def _song_text(song: Dict) -> str:
-    """Turns a song's attributes into one text blob the index can search."""
-    return (
+def load_song_notes(path: str) -> Dict[str, str]:
+    """
+    Loads hand-written song descriptions from a markdown file.
+
+    Expected format: one "## Song Title" heading per song, followed by a
+    short free-text blurb. Returns {} if the file doesn't exist, so the
+    retriever still works with just the structured catalog.
+    """
+    if not path or not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    notes = {}
+    for title, blurb in re.findall(r"^##\s+(.+?)\s*\n(.+?)(?=\n##|\Z)", text, re.DOTALL | re.MULTILINE):
+        notes[title.strip()] = blurb.strip()
+    return notes
+
+
+def _song_text(song: Dict, note: str = "") -> str:
+    """Turns a song's attributes (and optional free-text note) into one text blob to search."""
+    base = (
         f"{song['title']} {song['artist']} {song['genre']} {song['mood']} "
         f"energy {song['energy']} acousticness {song['acousticness']}"
     )
+    return f"{base} {note}" if note else base
 
 
 def _tokenize(text: str) -> List[str]:
-    return text.lower().replace("-", " ").split()
+    """Lowercases and splits into words, stripping punctuation (commas, periods, ...)
+    so "calm," in a note matches a clean query word like "calm"."""
+    return re.findall(r"[a-z0-9']+", text.lower())
 
 
 class SongIndex:
-    """A TF-IDF search index over a list of song dicts."""
+    """A TF-IDF search index over a list of song dicts, optionally enriched with free-text notes."""
 
-    def __init__(self, songs: List[Dict]):
+    def __init__(self, songs: List[Dict], notes: Optional[Dict[str, str]] = None):
         self.songs = songs
-        self._docs = [_tokenize(_song_text(song)) for song in songs]
+        notes = notes or {}
+        self._docs = [
+            _tokenize(_song_text(song, notes.get(song["title"], ""))) for song in songs
+        ]
         self._doc_freq = Counter()
         for doc in self._docs:
             for term in set(doc):
