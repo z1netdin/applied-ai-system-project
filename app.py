@@ -60,9 +60,20 @@ st.markdown(
 )
 
 st.title("VibeFinder")
-st.markdown('<p class="subtitle">How are you feeling right now?</p>', unsafe_allow_html=True)
+st.markdown(
+    '<p class="subtitle">Not sure what you need? We\'ll find something for you. '
+    "Or tell us how you're feeling.</p>",
+    unsafe_allow_html=True,
+)
 
 songs = load_songs("data/songs.csv")
+
+SURPRISE_QUERY = "a good, widely enjoyable song for someone who isn't sure what they want to hear right now"
+
+if st.button("Surprise Me", type="primary", use_container_width=True):
+    st.session_state["active_query"] = SURPRISE_QUERY
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 moods = {
     "Anxious": "calming songs to help ease anxiety and worry",
