@@ -20,40 +20,77 @@ st.set_page_config(page_title="VibeFinder", layout="centered")
 st.markdown(
     """
     <style>
-    .block-container { max-width: 760px; padding-top: 3rem; }
-    h1 { text-align: center; }
-    .subtitle { text-align: center; color: #5B5B72; font-size: 19px; margin-bottom: 2.5rem; }
-    .stButton > button {
-        height: 92px;
-        width: 100%;
-        font-size: 19px;
+    .stApp { background-color: #F7F4EE; }
+    .block-container { max-width: 720px; padding-top: 4rem; padding-bottom: 4rem; }
+
+    h1 {
+        text-align: center;
+        color: #2F3B38;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .subtitle {
+        text-align: center;
+        color: #6E7A74;
+        font-size: 18px;
+        line-height: 1.6;
+        margin: 0.75rem auto 3rem auto;
+        max-width: 520px;
+    }
+    .section-label {
+        color: #8A8475;
+        font-size: 14px;
         font-weight: 600;
-        border-radius: 16px;
-        border: 2px solid #E2E2EA;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        text-align: center;
+        margin: 2.5rem 0 1rem 0;
+    }
+
+    .stButton > button {
+        height: 88px;
+        width: 100%;
+        font-size: 18px;
+        font-weight: 600;
+        border-radius: 14px;
+        border: 1.5px solid #E3DED3;
         background-color: #FFFFFF;
-        color: #1A1A2E;
+        color: #2F3B38;
+        transition: all 0.15s ease;
     }
     .stButton > button:hover {
-        border-color: #6C5CE7;
-        color: #6C5CE7;
-        background-color: #F5F3FF;
+        border-color: #C1694F;
+        color: #C1694F;
+        background-color: #FBEDE7;
     }
     .stButton > button[kind="primary"] {
-        height: 56px;
-        background-color: #6C5CE7;
+        height: 64px;
+        background-color: #C1694F;
         border: none;
-        color: white;
+        color: #FFFFFF;
+        font-size: 19px;
     }
+    .stButton > button[kind="primary"]:hover {
+        background-color: #A8573F;
+        color: #FFFFFF;
+    }
+
     .pick-card {
         background-color: #FFFFFF;
-        border: 2px solid #E2E2EA;
-        border-radius: 16px;
-        padding: 20px 24px;
-        margin-bottom: 14px;
+        border: 1.5px solid #E3DED3;
+        border-radius: 14px;
+        padding: 22px 26px;
+        margin-bottom: 12px;
     }
-    .pick-title { font-size: 20px; font-weight: 700; color: #1A1A2E; margin-bottom: 4px; }
-    .pick-why { font-size: 16px; color: #5B5B72; }
-    .footnote { text-align: center; color: #9999AA; font-size: 14px; margin-top: 3rem; }
+    .pick-title { font-size: 19px; font-weight: 700; color: #2F3B38; }
+
+    .footnote {
+        text-align: center;
+        color: #A3A89E;
+        font-size: 13px;
+        margin-top: 3.5rem;
+        line-height: 1.6;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -61,8 +98,7 @@ st.markdown(
 
 st.title("VibeFinder")
 st.markdown(
-    '<p class="subtitle">Not sure what you need? We\'ll find something for you. '
-    "Or tell us how you're feeling.</p>",
+    '<p class="subtitle">Music to help you feel better, matched to how you feel right now.</p>',
     unsafe_allow_html=True,
 )
 
@@ -70,10 +106,10 @@ songs = load_songs("data/songs.csv")
 
 SURPRISE_QUERY = "a good, widely enjoyable song for someone who isn't sure what they want to hear right now"
 
-if st.button("Surprise Me", type="primary", use_container_width=True):
+if st.button("Not sure? Let us pick for you", type="primary", use_container_width=True):
     st.session_state["active_query"] = SURPRISE_QUERY
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown('<p class="section-label">Or choose what fits right now</p>', unsafe_allow_html=True)
 
 moods = {
     "Anxious": "calming songs to help ease anxiety and worry",
@@ -106,7 +142,7 @@ if st.session_state["active_query"]:
     with st.spinner("Finding songs for you..."):
         result = recommend_with_rag(st.session_state["active_query"], songs, k=3)
 
-    st.markdown("#### Your picks")
+    st.markdown('<p class="section-label">Your picks</p>', unsafe_allow_html=True)
     for song, _score in result["retrieved"]:
         st.markdown(
             f"""<div class="pick-card">
@@ -137,7 +173,7 @@ with st.expander("Prefer to build a detailed taste profile instead?"):
         def _clean_reason(reason: str) -> str:
             return re.sub(r"\s*\([+-]?\d+\.\d+\)", "", reason).strip()
 
-        st.markdown("#### Your picks")
+        st.markdown('<p class="section-label">Your picks</p>', unsafe_allow_html=True)
         for rank, (song, _score, explanation) in enumerate(results, start=1):
             st.markdown(f"**{rank}. {song['title']}** — {song['artist']}")
             reasons = [_clean_reason(r) for r in explanation.split("; ")]
