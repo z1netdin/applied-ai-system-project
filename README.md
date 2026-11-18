@@ -144,7 +144,7 @@ plus a log entry recording what was retrieved and whether the guardrail passed
    templated explanation instead of calling the AI. This is a deliberate reliability
    feature, not a bug.
 
-4. Run the app:
+4. Run the app (command line):
 
    ```bash
    python -m src.main
@@ -154,6 +154,13 @@ plus a log entry recording what was retrieved and whether the guardrail passed
 
    ```bash
    python -m src.main --query "sad acoustic songs for a rainy day"
+   ```
+
+   Or run the web page version instead (click-only, no typing needed - has
+   preset request buttons):
+
+   ```bash
+   streamlit run app.py
    ```
 
 ### Running Tests
@@ -262,8 +269,7 @@ response) to prove it actually catches bad output rather than always passing.
 
 **Example 1 - passes (AI stayed grounded in the retrieved songs)**
 
-| | |
-|---|---|
+
 | Input (retrieved songs) | `"Chill Study Beats" by LoRoom` |
 | AI response | `For studying, try "Chill Study Beats" by LoRoom - it is calm and acoustic.` |
 | Guardrail result | ✅ PASS — `grounded in retrieved songs` |
@@ -271,8 +277,7 @@ response) to prove it actually catches bad output rather than always passing.
 
 **Example 2 - fails (AI invented a song that was never retrieved)**
 
-| | |
-|---|---|
+
 | Input (retrieved songs) | `"Chill Study Beats" by LoRoom` |
 | AI response | `You should listen to "Unrelated Ballad" by Someone Else.` |
 | Guardrail result | ❌ FAIL — `response mentions a song that was not retrieved` |
@@ -280,8 +285,7 @@ response) to prove it actually catches bad output rather than always passing.
 
 **Example 3 - fails (AI didn't mention any song)**
 
-| | |
-|---|---|
+
 | Input (retrieved songs) | `"Chill Study Beats" by LoRoom` |
 | AI response | `Here is a great song for you.` |
 | Guardrail result | ❌ FAIL — `response does not reference any retrieved song` |
@@ -306,8 +310,7 @@ find something.
 
 **Before (tags only) vs. after (tags + notes), same 3 queries:**
 
-| Query | Before: top match (score) | After: top match (score) |
-|---|---|---|
+| Query                             | Before: top match (score)       | After: top match (score) |
 | "something calm for studying" | *(none — 0.000 for every song)* | Midnight Coding (0.210) |
 | "sad song for a rainy day" | Rainy Window Blues (0.215) | Rainy Window Blues (0.429) |
 | "fun danceable party song" | *(none — 0.000 for every song)* | Carnival Lights (0.105) |
@@ -336,8 +339,8 @@ and nothing crashed), which is itself a lesson: this harness checks "did it beha
 safely," not "did it behave well." A query with no real match is a case search should
 flag as low-confidence, not silently paper over.
 
-| Test Case | Input | Evaluation Criteria | Result |
-|---|---|---|---|
+| Test Case                 | Input |                                                   Evaluation Criteria |                 Result |
+
 | normal_calm_studying | "something calm and acoustic for studying late at night" | Retrieves songs, grounded explanation | ✅ PASS |
 | normal_workout | "high energy pop for a workout" | Retrieves songs, grounded explanation | ✅ PASS |
 | normal_happy | "happy upbeat songs" | Retrieves songs, grounded explanation | ✅ PASS |
