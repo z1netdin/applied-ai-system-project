@@ -9,9 +9,9 @@ import streamlit as st
 
 from src.recommender import load_songs, recommend_songs, recommend_with_rag
 
-st.set_page_config(page_title="VibeFinder", page_icon="🎵")
+st.set_page_config(page_title="VibeFinder")
 
-st.title("🎵 VibeFinder")
+st.title("VibeFinder")
 st.caption(
     "A Module 3 recommender, extended with a RAG pipeline: "
     "retrieve real songs, then an AI explains them, checked by a guardrail."
@@ -25,10 +25,10 @@ with tab_rag:
     st.subheader("Click a request, or type your own")
 
     presets = {
-        "😌 Calm for studying": "something calm and acoustic for studying late at night",
-        "💪 Workout": "high energy pop for a workout",
-        "🎉 Party": "fun danceable party song",
-        "🌧️ Rainy day": "sad song for a rainy day",
+        "Calm for studying": "something calm and acoustic for studying late at night",
+        "Workout": "high energy pop for a workout",
+        "Party": "fun danceable party song",
+        "Rainy day": "sad song for a rainy day",
     }
 
     query = st.session_state.get("rag_query", "")
@@ -41,7 +41,7 @@ with tab_rag:
 
     query = st.text_input("Or type your own request", value=query)
 
-    if st.button("🔍 Find songs", key="rag_button", type="primary"):
+    if st.button("Find songs", key="rag_button", type="primary"):
         if not query.strip():
             st.warning("Click a request above, or type your own first.")
         else:
@@ -49,16 +49,15 @@ with tab_rag:
                 result = recommend_with_rag(query, songs, k=3)
 
             if result["source"] == "llm":
-                st.success("🤖 Real AI answer from Gemini - the guardrail checked it, and it only talks about the songs found below.")
-                st.balloons()
+                st.success("AI answer from Gemini - the guardrail checked it, and it only talks about the songs found below.")
             else:
-                st.info("🛡️ Safe backup answer used instead (AI unavailable, or the guardrail blocked a bad answer).")
+                st.info("Safe backup answer used instead (AI unavailable, or the guardrail blocked a bad answer).")
 
-            st.markdown("**🔎 Songs retrieved by search:**")
+            st.markdown("**Songs retrieved by search:**")
             for song, score in result["retrieved"]:
                 st.write(f"- {song['title']} by {song['artist']}  (match: {score:.3f})")
 
-            st.markdown("**💬 Explanation:**")
+            st.markdown("**Explanation:**")
             st.write(result["explanation"])
 
 with tab_structured:
@@ -82,6 +81,3 @@ with tab_structured:
         for rank, (song, score, explanation) in enumerate(results, start=1):
             st.markdown(f"**{rank}. {song['title']}** by {song['artist']}  (Score: {score:.2f})")
             st.caption(explanation)
-
-st.divider()
-st.caption("Code: github.com/z1netdin/applied-ai-system-project")
