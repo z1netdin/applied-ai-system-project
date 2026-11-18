@@ -59,6 +59,11 @@ The AI model never sees the full song catalog and never answers from its own kno
 
 ### Pipeline
 
+Full system diagram (Mermaid source): [`diagrams/architecture.mmd`](diagrams/architecture.mmd).
+It shows both input paths (structured profile and free-text query), the
+retriever/generator/guardrail components, where the run gets logged, where a
+human reviews that log, and which automated tests check which component.
+
 ```
 Input: free-text request (e.g. "high energy pop for a workout")
 

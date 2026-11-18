@@ -1,18 +1,27 @@
 flowchart TD
-    Start[User runs src/main.py] --> Mode{Which input?}
+    subgraph Runtime["Runtime pipeline: python -m src.main"]
+        Start[Input: structured profile OR free-text query] --> Mode{Which input?}
 
-    Mode -->|Structured profile| Score[score_song: genre/mood/energy/acousticness rules]
-    Score --> RankA[recommend_songs: rank by score]
-    RankA --> OutA[Top-k songs + rule-based explanation]
+        Mode -->|Structured profile| Score[Score: score_song rules]
+        Score --> RankA[Rank: recommend_songs]
+        RankA --> OutA[Output: top-k songs + rule-based reasons]
 
-    Mode -->|Free-text query, e.g. 'calm songs for studying'| Retrieve[Retrieve: SongIndex.search - TF-IDF over song catalog]
-    Retrieve --> Retrieved[(Top-k retrieved songs)]
-    Retrieved --> Generate[Generate: Gemini explains picks using ONLY retrieved songs]
-    Generate --> Guard{Guardrail: check_grounding}
-    Guard -->|Pass: mentions a retrieved song, no invented song| OutB[Use AI explanation]
-    Guard -->|Fail or AI unavailable| Fallback[Fallback: deterministic template from retrieved songs]
-    Fallback --> OutB
+        Mode -->|Free-text query, e.g. 'calm songs for studying'| Retrieve[Retriever: SongIndex.search - TF-IDF over song catalog]
+        Retrieve --> Gen[Generator: Gemini explains picks using ONLY retrieved songs]
+        Gen --> Guard{Evaluator / Guardrail: check_grounding}
+        Guard -->|Pass: mentions a retrieved song, no invented song| OutB[Output: AI explanation]
+        Guard -->|Fail, or AI unavailable| Fallback[Fallback: deterministic template from retrieved songs]
+        Fallback --> OutB
+    end
 
-    OutA --> Log[Log run to logs/app.log]
+    OutA --> Log[Log: logs/app.log records query, retrieved songs, guardrail pass/fail]
     OutB --> Log
-    Log --> End[Print result to console]
+    Log --> Human[Human-in-the-loop: developer reviews app.log, spot-checks any blocked/fallback response]
+
+    subgraph Tests["Offline tester: pytest - 11 automated tests, run before every commit"]
+        T1[test_recommender.py] -.checks.-> Score
+        T2[test_retrieval.py] -.checks.-> Retrieve
+        T3[test_rag_pipeline.py: mocked LLM] -.checks.-> Gen
+        T4[test_guardrails.py] -.checks.-> Guard
+        T5[test_rag_pipeline.py: fallback case] -.checks.-> Fallback
+    end
