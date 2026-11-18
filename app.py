@@ -21,30 +21,57 @@ st.markdown(
     """
     <style>
     .stApp { background-color: #F7F4EE; }
-    .block-container { max-width: 720px; padding-top: 4rem; padding-bottom: 4rem; }
+    .block-container { max-width: 880px; padding-top: 2rem; padding-bottom: 4rem; }
 
-    h1 {
+    .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #E3DED3;
+    }
+    .topbar .brand { font-weight: 700; color: #2F3B38 !important; font-size: 16px; letter-spacing: 0.5px; }
+    .topbar nav a {
+        color: #6E7A74 !important;
+        text-decoration: none;
+        font-size: 15px;
+        margin-left: 28px;
+    }
+    .topbar nav a:hover { color: #C1694F !important; }
+
+    h1[data-testid="stHeading"], .stApp h1, [data-testid="stMarkdownContainer"] h1 {
+        color: #2F3B38 !important;
         text-align: center;
-        color: #2F3B38;
-        font-weight: 700;
+        font-weight: 700 !important;
         letter-spacing: 0.5px;
     }
     .subtitle {
-        text-align: center;
-        color: #6E7A74;
+        text-align: center !important;
+        color: #6E7A74 !important;
         font-size: 18px;
         line-height: 1.6;
-        margin: 0.75rem auto 3rem auto;
+        margin: 0.75rem auto 1.5rem auto !important;
         max-width: 520px;
     }
+    .how-it-works {
+        display: flex;
+        justify-content: center;
+        gap: 2.5rem;
+        margin: 1.5rem auto 2.5rem auto;
+        flex-wrap: wrap;
+    }
+    .how-step { text-align: center; max-width: 180px; color: #6E7A74; font-size: 14px; }
+    .how-step b { display: block; color: #2F3B38; font-size: 15px; margin-bottom: 2px; }
+
     .section-label {
-        color: #8A8475;
+        color: #8A8475 !important;
         font-size: 14px;
         font-weight: 600;
         letter-spacing: 1.5px;
         text-transform: uppercase;
-        text-align: center;
-        margin: 2.5rem 0 1rem 0;
+        text-align: center !important;
+        margin: 2.5rem 0 1rem 0 !important;
     }
 
     .stButton > button {
@@ -53,45 +80,73 @@ st.markdown(
         font-size: 18px;
         font-weight: 600;
         border-radius: 14px;
-        border: 1.5px solid #E3DED3;
+        border: 1.5px solid #D6CFC0;
         background-color: #FFFFFF;
         color: #2F3B38;
+        box-shadow: 0 1px 4px rgba(47, 59, 56, 0.06);
         transition: all 0.15s ease;
     }
     .stButton > button:hover {
         border-color: #C1694F;
         color: #C1694F;
         background-color: #FBEDE7;
+        box-shadow: 0 4px 12px rgba(193, 105, 79, 0.15);
     }
     .stButton > button[kind="primary"] {
-        height: 64px;
+        height: 72px;
         background-color: #C1694F;
         border: none;
-        color: #FFFFFF;
+        color: #FFFFFF !important;
         font-size: 19px;
+        box-shadow: 0 2px 8px rgba(193, 105, 79, 0.25);
     }
     .stButton > button[kind="primary"]:hover {
         background-color: #A8573F;
-        color: #FFFFFF;
+        color: #FFFFFF !important;
     }
 
     .pick-card {
         background-color: #FFFFFF;
-        border: 1.5px solid #E3DED3;
+        border: 1.5px solid #D6CFC0;
         border-radius: 14px;
         padding: 22px 26px;
         margin-bottom: 12px;
+        box-shadow: 0 1px 4px rgba(47, 59, 56, 0.06);
     }
     .pick-title { font-size: 19px; font-weight: 700; color: #2F3B38; }
+
+    .stTextInput label, .stSelectbox label, .stSlider label, .stCheckbox label {
+        color: #2F3B38 !important;
+        font-weight: 600 !important;
+    }
+    .stTextInput input::placeholder { color: #9C9688 !important; opacity: 1 !important; }
+
+    .about-box {
+        background-color: #FFFFFF;
+        border: 1.5px solid #E3DED3;
+        border-radius: 14px;
+        padding: 24px 28px;
+        margin-top: 3rem;
+    }
+    .about-box h4 { color: #2F3B38; margin-bottom: 8px; }
+    .about-box p { color: #6E7A74; font-size: 15px; line-height: 1.6; margin: 0; }
 
     .footnote {
         text-align: center;
         color: #A3A89E;
         font-size: 13px;
-        margin-top: 3.5rem;
+        margin-top: 1.5rem;
         line-height: 1.6;
     }
     </style>
+
+    <div class="topbar">
+        <div class="brand">VIBEFINDER</div>
+        <nav>
+            <a href="#how-it-works-anchor">How It Works</a>
+            <a href="#about-anchor">About</a>
+        </nav>
+    </div>
     """,
     unsafe_allow_html=True,
 )
@@ -101,13 +156,26 @@ st.markdown(
     '<p class="subtitle">Music to help you feel better, matched to how you feel right now.</p>',
     unsafe_allow_html=True,
 )
+st.markdown(
+    """
+    <div id="how-it-works-anchor" class="how-step" style="height:0; margin:0; padding:0;"></div>
+    <div class="how-it-works">
+        <div class="how-step"><b>1. Tell us how you feel</b>Pick a mood, or describe it yourself.</div>
+        <div class="how-step"><b>2. We find a match</b>Real songs, chosen for that feeling.</div>
+        <div class="how-step"><b>3. See your picks</b>With a short reason for each one.</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 songs = load_songs("data/songs.csv")
 
 SURPRISE_QUERY = "a good, widely enjoyable song for someone who isn't sure what they want to hear right now"
 
-if st.button("Not sure? Let us pick for you", type="primary", use_container_width=True):
-    st.session_state["active_query"] = SURPRISE_QUERY
+col_l, col_mid, col_r = st.columns([1, 3, 1])
+with col_mid:
+    if st.button("Not sure? Let us pick for you", type="primary", use_container_width=True):
+        st.session_state["active_query"] = SURPRISE_QUERY
 
 st.markdown('<p class="section-label">Or choose what fits right now</p>', unsafe_allow_html=True)
 
@@ -133,7 +201,7 @@ for col, name in zip(row2, mood_names[3:]):
         st.session_state["active_query"] = moods[name]
 
 with st.expander("Describe it in your own words instead"):
-    custom_text = st.text_input("What's going on?", label_visibility="collapsed", placeholder="Tell us how you feel...")
+    custom_text = st.text_input("How are you feeling?", placeholder="e.g. overwhelmed and need to slow down")
     if st.button("Find songs", type="primary"):
         if custom_text.strip():
             st.session_state["active_query"] = custom_text
@@ -180,7 +248,20 @@ with st.expander("Prefer to build a detailed taste profile instead?"):
             st.caption(", ".join(reasons))
 
 st.markdown(
-    '<p class="footnote">VibeFinder suggests music based on how you say you feel. '
-    "It's a companion, not a substitute for professional care.</p>",
+    """
+    <div id="about-anchor" style="height:0; margin:0; padding:0;"></div>
+    <div class="about-box">
+        <h4>About VibeFinder</h4>
+        <p>VibeFinder matches your mood to real songs in our catalog, using search
+        and a touch of AI to pick what fits. It's a companion for how you're
+        feeling right now - not a substitute for professional care.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<p class="footnote">If you are in crisis, please reach out to a mental health professional '
+    "or a crisis line in your area.</p>",
     unsafe_allow_html=True,
 )
