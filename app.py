@@ -24,9 +24,18 @@ st.set_page_config(page_title="VibeFinder", layout="centered")
 st.markdown(
     """
     <style>
-    header[data-testid="stHeader"] { height: 0; visibility: hidden; }
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
+    header[data-testid="stHeader"] { display: none !important; }
+    div[data-testid="stToolbar"] { display: none !important; }
+    #MainMenu { visibility: hidden !important; }
+    footer { visibility: hidden !important; }
+
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] summary p,
+    [data-testid="stExpander"] summary span {
+        color: #2C2A29 !important;
+        font-weight: 600 !important;
+        opacity: 1 !important;
+    }
 
     .stApp { background-color: #F7F4EE; }
     .block-container { max-width: 900px; padding-top: 1.5rem; padding-bottom: 4rem; }
@@ -163,7 +172,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("VibeFinder")
+st.markdown(
+    '<h1 style="text-align:center; color:#2C2A29; font-weight:700; '
+    'letter-spacing:0.5px; margin-bottom:0;">VibeFinder</h1>',
+    unsafe_allow_html=True,
+)
 st.markdown(
     '<p class="subtitle">Music to help you feel better, matched to how you feel right now.</p>',
     unsafe_allow_html=True,
