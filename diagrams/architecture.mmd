@@ -1,0 +1,7 @@
+flowchart TD
+    A[User input: genre, mood, target_energy, likes_acoustic] --> B[load_songs: data/songs.csv]
+    B --> C[score_song: for each song]
+    C --> D[Scoring rules\ngenre match +1.5\nmood match +2.0\nenergy closeness up to +2.0\nacousticness alignment +/-0.5]
+    D --> E[recommend_songs: rank by score, tie-break by energy diff]
+    E --> F[Top-k songs + per-song explanation]
+    F --> G[CLI output: src/main.py]
