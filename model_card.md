@@ -174,3 +174,37 @@ Where my intuition disagrees with the system is `Broken Streetlights` at #3. It'
 **What surprised me about how simple algorithms can still "feel" like recommendations?** I was surprised that a simple point-based formula could still feel like a real recommendation. But I was also surprised at how "dumb" it can be — just matching labels and numbers isn't the same as really understanding what a song feels like.
 
 **What would I try next if I extended this project?** I'd want to spend months researching to build something closer to what Spotify or YouTube actually do — a much better algorithm, trained on a lot more real data, instead of a small list of made-up songs.
+
+---
+
+## 10. Applied AI System Extension — Responsible AI Reflection
+
+This section covers the new part only: the free-text RAG pipeline (retrieve →
+generate with Gemini → guardrail → fallback) added on top of VibeFinder 1.0.
+
+### What are the limitations or biases in this system?
+
+- **Retrieval is literal, not semantic.** The search step matches exact words, not meaning. A word like "calm" will not match a song tagged "chill" unless that exact word is present. So the search can miss a song that is actually a great fit, just because the user and the catalog used different words for the same feeling.
+- **The guardrail checks safety, not quality.** It only confirms the AI stuck to real, retrieved songs. It does not check whether the AI picked the *best* one. A safe but mediocre answer always passes.
+- **Old biases carry over.** The catalog is still only 18 songs, most genres have just 1 song, and mood is still weighted higher than genre in the original scoring (Section 6). The new free-text path sits on top of that same small, uneven catalog — it just hides the bias behind a nicer-sounding sentence.
+- **A new bias I can't rule out:** the AI picks which retrieved song to talk about first or most. I did not test whether it favors songs with more "exciting" labels (like "happy" or "intense") over quieter ones, even when they fit the request equally well.
+
+### Could this AI be misused, and how would I prevent it?
+
+The free-text box is a real prompt sent to an AI model, so it is open to **prompt injection** — someone could type something designed to make the AI ignore its instructions and say something unrelated to music.
+
+What already helps: the guardrail only accepts a response if it names a real, retrieved song. An off-topic answer almost never does that, so it gets thrown out and replaced with the safe template automatically — without me planning this as an anti-injection feature specifically, it ends up blocking a lot of injection attempts as a side effect.
+
+What I have *not* built yet, and would add before letting strangers use this: a check on the *input* itself (reject very long or clearly non-music text before it ever reaches the AI), and a rate limit, so one person can't spam the API.
+
+### What surprised me while testing reliability?
+
+The biggest surprise: my evaluation harness reported **"5/5 test cases passed,"** but two of those five (the empty query and the gibberish query) only passed because the harness checks "did it behave safely," not "did it behave well." Underneath, the search step found **0.000 similarity** for every single song on both of those inputs — it had nothing relevant to return, and the AI just talked about whatever songs it was handed anyway. A clean pass/fail score hid a real weakness. That taught me a passing test is only as honest as what it actually measures.
+
+A smaller surprise: partway through building this, Google changed which Gemini model versions were available, and my first attempt failed with an error telling me to switch models. I didn't expect to run into "the AI provider changed things under me" in a small class project, but it's a real part of building on top of AI APIs.
+
+### My collaboration with AI (Claude) during this project
+
+**One suggestion I accepted:** Claude suggested the system should *fail closed* — if the guardrail rejects an AI answer, or the AI call fails at all (no key, no network, rate limit), immediately fall back to a safe templated explanation instead of retrying or showing a questionable answer. I kept this exactly as suggested, because I watched it actually catch a forced bad test case (a fake response naming a song that was never retrieved) during testing, and it means the app never crashes even without a working API key — which matters since I can't guarantee grading will happen with my key still active.
+
+**One suggestion I did not accept as written:** Claude's first recommendation was to extend my **Module 2 project (PawPal+, a pet-care scheduler)** instead of this one, using an agentic tool-calling loop, since PawPal+ already had the cleanest class structure. I pushed back and asked directly why not the music recommender. Claude reconsidered and changed its recommendation to the music recommender. This wasn't really a "wrong" suggestion — PawPal+ could have worked too — it was a **poor fit**: an agent that actually edits someone's schedule felt riskier to guardrail safely in the time I had, while a song catalog mapped onto retrieval much more directly. So I rejected the first project choice and we rebuilt the plan around this project instead.
