@@ -1,10 +1,22 @@
 # 🎵 VibeFinder: Applied AI Music Recommender
 
-## Project Summary
+## Title and Summary
 
-**Base project:** This extends **VibeFinder 1.0**, a Module 3 mini-project. The original system is a content-based recommender: a user states their taste (favorite genre, favorite mood, target energy, and whether they like acoustic songs) through a structured profile, and the system scores every song in a small catalog based on how well it matches, returning the top 5 with plain-English reasons for each pick. It doesn't learn from other users or listening history — it only compares a song's own attributes to a one-time stated profile. That original logic still lives in `recommend_songs()` and runs as part of this app.
+**VibeFinder** recommends songs. You can either fill in a taste profile, or just type a plain request like *"something calm for studying late at night."*
 
-**What's new in this version (the Applied AI System extension):** a user can now type a **free-text request** (like "something calm and acoustic for studying late at night") instead of filling in a structured profile. The system:
+Why it matters: the free-text path uses **RAG** (Retrieval-Augmented Generation). The AI must first look up real songs, then it can only talk about those real songs, and the code double-checks that it did. This same pattern — look up data, then answer, then verify — is used in real AI products like support bots and coding assistants.
+
+## Original Project (Module 3: Music Recommender Simulation)
+
+This builds on my **Module 3 project, "Music Recommender Simulation"** (also called VibeFinder 1.0).
+
+The original goal was simple: a user fills in a taste profile (genre, mood, energy, acoustic or not). The system scores all 18 songs in the catalog against that profile using fixed rules, and returns the top 5 with a plain-English reason for each one. No AI model was used — just rule-based scoring.
+
+That original code is untouched. It still runs first in this app, as `recommend_songs()`.
+
+## What's New: the Applied AI Extension
+
+A user can now type a **free-text request** instead of filling in a structured profile. The system:
 
 1. **Retrieves** the closest-matching songs from the catalog for that request (`src/retrieval.py` — a small TF-IDF search index, no external search engine needed).
 2. **Generates** a natural-language explanation using Google's Gemini model, but the model is only allowed to talk about the songs that were actually retrieved (`src/llm.py`).
@@ -53,16 +65,23 @@ Output: sort every song by its score, highest first, and return the top k
 
 ## New Feature: RAG Pipeline (Retrieve → Generate → Guardrail)
 
-### Why this is RAG and not just "calling an LLM"
+### Why this is RAG, not just "calling an LLM"
 
-The AI model never sees the full song catalog and never answers from its own knowledge. It only ever sees the small set of songs that the retrieval step already picked out for this specific request. If the model tries to talk about a song outside that retrieved set, the guardrail blocks it. This is the difference between RAG and "ask an LLM a question": the retrieval step actively controls and limits what the model is allowed to say.
+The AI never sees the whole song catalog. It only sees the few songs that retrieval already picked for this one request. If it tries to talk about any other song, the guardrail blocks it. That control step is what makes this RAG, not just "ask an AI a question."
 
-### Pipeline
+## Architecture Overview
 
-Full system diagram (Mermaid source): [`diagrams/architecture.mmd`](diagrams/architecture.mmd).
-It shows both input paths (structured profile and free-text query), the
-retriever/generator/guardrail components, where the run gets logged, where a
-human reviews that log, and which automated tests check which component.
+Full diagram (Mermaid source): [`diagrams/architecture.mmd`](diagrams/architecture.mmd).
+
+Short version: two paths in, one log at the end.
+
+- **Structured profile path** (original logic): score → rank.
+- **Free-text path** (new): retrieve → generate → guardrail → fallback if needed.
+- Both paths write to `logs/app.log`.
+- A **human** can read that log to check anything the guardrail blocked.
+- **11 automated tests** each check one piece (retriever, generator, guardrail, fallback, scorer).
+
+### Pipeline, step by step
 
 ```
 Input: free-text request (e.g. "high energy pop for a workout")
@@ -257,40 +276,44 @@ guardrail's behavior is checked on every run, not just by hand.
 
 ---
 
-## Experiments You Tried
+## Design Decisions
 
-Use this section to document the experiments you ran. For example:
+- **Keyword search (TF-IDF), not embeddings.** Simple, fast, no extra cost, works offline for tests. Trade-off: it's a literal word match. "Calm" won't match a song tagged "chill."
+- **Kept the old `recommend_songs()` untouched.** The new free-text path runs next to it, not instead of it. Easy to compare old vs. new.
+- **Used Gemini, not Claude.** That's the API key I had. `src/llm.py` is one small file, so swapping to another AI provider later is easy.
+- **If the guardrail says no, use a template — don't retry the AI.** Faster, free, and the user always gets an answer right away.
+- **Logs save to a local file, not a cloud service.** Simple and enough for a class project.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+---
+
+## Testing Summary
+
+**What worked:** all 11 tests pass in under a second. 3 of them test failure cases (no API key, AI invents a song, AI names no song) without calling the real API.
+
+**What didn't work at first:** my first test used an old AI model name and an old library. It failed with an error telling me to update. I checked which models actually work, switched to the current library (`google-genai`), and used `gemini-3.1-flash-lite` instead. I also saw one "model overloaded" error — I tried again and it worked, so that was temporary, not a real bug.
+
+**What I learned:** my guardrail checks one thing only — did the AI stick to the real retrieved songs? It does NOT check if the AI picked the *best* song. A safe-but-average answer still passes. I also learned my search step (keyword match) is weaker than I expected, and that weakness limits how good the final answer can be — not just the AI part.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
+**From the original Module 3 project:**
 
-Examples:
+- Only 18 songs total — a tiny catalog.
+- No understanding of lyrics or audio — only tags someone typed in (genre, mood, energy).
+- Mood is weighted higher than genre, which could push the system toward mood matches over real taste matches.
 
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
+**From the new RAG extension:**
 
-You will go deeper on this in your model card.
+- Keyword search can score **0.000 match** for every song if the user's words don't appear in the catalog. The AI can still give an OK answer using the song's real data, but weak search means a lower ceiling on how good the answer can be.
+- The guardrail checks "did it stay grounded," not "did it pick the best song." A safe-but-mediocre pick still passes.
+- The AI model name is hardcoded. If the provider removes that model again, the code needs a manual update.
+- No limit on how many times someone can call the AI — no cost control.
 
 ---
 
 ## Reflection
 
-Read and complete `model_card.md`:
-
-[**Model Card**](model_card.md)
-
-Write 1 to 2 paragraphs here about what you learned:
-
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
-
-
+The graded reflection on how I collaborated with AI while building this, what I accepted versus rejected or revised, and a deeper discussion of the system's limitations lives in [**model_card.md**](model_card.md) — not here, since reflection content placed only in the README doesn't earn the reflection points.
 
