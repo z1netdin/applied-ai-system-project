@@ -153,9 +153,16 @@ plus a log entry recording what was retrieved and whether the guardrail passed
 pytest
 ```
 
-11 tests cover the original scoring logic, the retrieval index, the guardrail, and
-the RAG pipeline's fallback behavior (including simulating a missing/failing API key,
-without needing a real network call).
+14 tests cover the original scoring logic, the retrieval index, the guardrail, the
+RAG pipeline's fallback behavior (including simulating a missing/failing API key,
+without needing a real network call), and the evaluation harness itself.
+
+To run the reliability evaluation harness and see a pass/fail table (needs a real
+API key for the full LLM path, but still runs and reports results without one):
+
+```bash
+python -m src.evaluate
+```
 
 ---
 
@@ -273,6 +280,31 @@ response) to prove it actually catches bad output rather than always passing.
 
 These three cases are also automated tests in `tests/test_guardrails.py`, so the
 guardrail's behavior is checked on every run, not just by hand.
+
+---
+
+## Evaluation Results
+
+`python -m src.evaluate` runs the real pipeline against 5 fixed test cases — 3 normal
+queries and 2 edge cases — and checks each one automatically (no crash, at least one
+song retrieved, and a safe or grounded explanation). It is also covered by
+`tests/test_evaluate.py` so this check itself cannot silently break.
+
+**Summary: 5/5 test cases passed.** But the two edge cases reveal a real weak spot:
+on an empty query and a gibberish query, the keyword search found **0.000 similarity**
+for every single song — it had nothing relevant to return, so it just handed the AI
+3 arbitrary songs. The harness still marks this PASS (because the AI stayed grounded
+and nothing crashed), which is itself a lesson: this harness checks "did it behave
+safely," not "did it behave well." A query with no real match is a case search should
+flag as low-confidence, not silently paper over.
+
+| Test Case | Input | Evaluation Criteria | Result |
+|---|---|---|---|
+| normal_calm_studying | "something calm and acoustic for studying late at night" | Retrieves songs, grounded explanation | ✅ PASS |
+| normal_workout | "high energy pop for a workout" | Retrieves songs, grounded explanation | ✅ PASS |
+| normal_happy | "happy upbeat songs" | Retrieves songs, grounded explanation | ✅ PASS |
+| edge_empty_query | `""` | Handles gracefully, no crash | ✅ PASS (search similarity was 0.000 for every song) |
+| edge_gibberish_query | "xyzzy qqqq zzzrblx nonsense" | Handles gracefully, no hallucinated song | ✅ PASS (search similarity was 0.000 for every song) |
 
 ---
 
